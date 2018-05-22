@@ -63,21 +63,22 @@ class ParameterSampling:
 
 class PSO:
 
-    def __init__(self, parameters_samples):
-        self.parameters_samples = parameters_samples
-        self.solution_space = np.array([])
-        self.parameters_types = np.dtype('b')
+    def __init__(self, parameters):
+        self.parameters = parameters
+        self.solution_space = np.zeros(1, dtype=np.int64)
+        self.parameters_types = np.dtype('int64')
         self.get_parameters_types()
         self.build_solution_space()
 
     def __repr__(self):
         print_message = ''
-        print_message += '{0}'.format(self.parameters_types)
+        print_message += '{0}\n'.format(self.parameters_types)
+        print_message += '{0}\n'.format(self.solution_space)
         return print_message
 
     def get_parameters_types(self):
         parameters_types = ''
-        for parameter in self.parameters_samples:
+        for parameter in self.parameters:
             if parameter.samples.dtype is np.dtype('float'):
                 parameters_types += 'f8,'
             else:
@@ -86,7 +87,10 @@ class PSO:
         return self.parameters_types
 
     def build_solution_space(self):
-        self.solution_space = np.zeros(1)
+        parameters_sizes = []
+        for parameter in self.parameters:
+            parameters_sizes.append(parameter.samples.size)
+        self.solution_space = np.zeros(parameters_sizes)
         return self.solution_space
 
 
