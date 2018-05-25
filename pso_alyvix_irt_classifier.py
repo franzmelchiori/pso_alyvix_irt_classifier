@@ -101,12 +101,14 @@ class PSO:
 
     def __init__(self, parameters, particle_amount):
         self.parameters = parameters
-        self.solution_dimensions = len(self.parameters)
-        # self.parameters_types = np.dtype(np.byte)
-        # self.get_parameters_types()
         self.particle_amount = particle_amount
+        self.solution_space_sizes = np.array(
+            [parameter.samples.size for parameter in self.parameters],
+            dtype=np.int16)
+        self.solution_dimensions = len(self.solution_space_sizes)
         self.particle_space = np.zeros(0, dtype=np.byte)
         self.init_particle_space()
+        self.particle_result = Particle(self.solution_dimensions)
         self.result_space = np.zeros(0, dtype=np.byte)
         self.build_result_space()
 
@@ -138,6 +140,9 @@ class PSO:
                             for parameter in self.parameters]
         self.result_space = np.zeros(parameters_sizes, dtype=np.float16)
         return self.result_space
+
+    def iter_particle_swarm(self):
+        pass
 
 
 def main():
