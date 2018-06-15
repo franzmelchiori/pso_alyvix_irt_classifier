@@ -67,9 +67,10 @@ class ParameterSampling:
 
 class Particle:
 
-    def __init__(self, solution_dimensions, inertial_weight=1.,
+    def __init__(self, solution_space_sizes, inertial_weight=1.,
                  cognitive_weight=1., social_weight=1):
-        self.solution_dimensions = solution_dimensions
+        self.solution_space_sizes = solution_space_sizes
+        self.solution_dimensions = len(self.solution_space_sizes)
         self.weight = np.ones([3], dtype=np.float16)
         self.weight[0] = inertial_weight
         self.weight[1] = cognitive_weight
@@ -79,6 +80,7 @@ class Particle:
         self.speed = self.init_position()
         self.position = self.init_position()
         self.best = self.init_position()
+        self.best_swarm = self.init_position()
 
     def __repr__(self):
         print_message = ''
@@ -94,7 +96,40 @@ class Particle:
         self.random[2] *= np.array([random.random()], dtype=np.float16)
 
     def init_position(self):
-        return np.zeros([self.solution_dimensions], dtype=np.uint8)
+        return np.zeros([self.solution_dimensions], dtype=np.int16)
+
+    def set_position(self, position, init=False):
+        self.position = position
+        if init:
+            self.best_swarm = position
+
+    def set_best_swarm(self, position):
+        self.best_swarm = position
+
+    def bouncing(self, component_displace):
+        for (dimension_number, dimension_upperbound) in enumerate(
+                self.solution_space_sizes):
+            intertial_rebound = abs(component_displace[dimension_number])
+            (rebound_number, rebound_displace) = divmod(
+                intertial_rebound, dimension_upperbound)
+            if rebound_number % 2 is not False:
+                component_displace[dimension_number] = rebound_displace
+            else:
+                component_displace[dimension_number] = dimension_upperbound - \
+                                                       rebound_displace
+
+    def perturb(self):
+        intertial_displace = self.speed - 0
+        cognitive_displace = self.best - self.position
+        social_displace = self.best_swarm - self.position
+        intertial_term = self.weight[0] * self.random[0] * intertial_displace
+        cognitive_term = self.weight[1] * self.random[1] * cognitive_displace
+        social_term = self.weight[2] * self.random[2] * social_displace
+        self.bouncing(intertial_term)
+        self.bouncing(cognitive_term)
+        self.bouncing(social_term)
+        self.speed = intertial_term + cognitive_term + social_term
+        self.position = self.position + self.speed
 
 
 class PSO:
@@ -102,13 +137,20 @@ class PSO:
     def __init__(self, parameters, particle_amount):
         self.parameters = parameters
         self.particle_amount = particle_amount
+        self.parameter_types = [parameter.samples_type
+                                for parameter in self.parameters]
+        # print(self.parameter_types)
+        # if np.float16 in self.parameter_types:
+        #     self.position_type = np.float16
+        # else:
+        #     self.position_type = np.int16
         self.solution_space_sizes = np.array(
             [parameter.samples.size for parameter in self.parameters],
             dtype=np.int16)
         self.solution_dimensions = len(self.solution_space_sizes)
         self.particle_space = np.zeros(0, dtype=np.byte)
         self.init_particle_space()
-        self.particle_result = Particle(self.solution_dimensions)
+        self.particle_result = Particle(self.solution_space_sizes)
         self.result_space = np.zeros(0, dtype=np.byte)
         self.build_result_space()
 
@@ -117,7 +159,7 @@ class PSO:
         # print_message += '{0}\n'.format(self.parameters_types)
         for particle in self.particle_space:
             print_message += '{0}\n\n'.format(particle)
-        print_message += '{0}\n'.format(self.result_space)
+        # print_message += '{0}\n'.format(self.result_space)
         return print_message
 
     # def get_parameters_types(self):
@@ -130,9 +172,15 @@ class PSO:
     #     return self.parameters_types
 
     def init_particle_space(self):
-        self.particle_space = [Particle(self.solution_dimensions)
+        self.particle_space = [Particle(self.solution_space_sizes)
                                for particle_number
                                in range(self.particle_amount)]
+        for particle in self.particle_space:
+            position = np.array([random.randint(0, coordinate_size-1)
+                                 for coordinate_size
+                                 in self.solution_space_sizes],
+                                dtype=np.int16)
+            particle.set_position(position, True)
         return self.particle_space
 
     def build_result_space(self):
@@ -142,7 +190,9 @@ class PSO:
         return self.result_space
 
     def iter_particle_swarm(self):
-        pass
+        for particle in self.particle_space:
+            particle.perturb()
+        return True
 
 
 def main():
@@ -150,7 +200,11 @@ def main():
     param_2 = ParameterSampling(0., 10, 7)
     param_3 = ParameterSampling(0, 1, 2)
     params = [param_1, param_2, param_3]
-    pso_test = PSO(params, 2)
+    pso_test = PSO(params, 3)
+    print('*** INIT ***')
+    print(pso_test)
+    pso_test.iter_particle_swarm()
+    print('*** ITER 1 ***')
     print(pso_test)
 
 
