@@ -24,7 +24,14 @@
 
 import random
 import numpy as np
+import scipy.special as sps
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cbook
+from matplotlib import cm
+from matplotlib.colors import LightSource
 
 
 class ParameterSampling:
@@ -67,8 +74,9 @@ class ParameterSampling:
 
 class Particle:
 
-    def __init__(self, solution_space_sizes, inertial_weight=1.,
+    def __init__(self, gain_function, solution_space_sizes, inertial_weight=1.,
                  cognitive_weight=1., social_weight=1):
+        self.gain_function = gain_function
         self.solution_space_sizes = solution_space_sizes
         self.solution_dimensions = len(self.solution_space_sizes)
         self.weight = np.ones([3], dtype=np.float16)
@@ -81,6 +89,7 @@ class Particle:
         self.position = self.init_position()
         self.best = self.init_position()
         self.best_swarm = self.init_position()
+        self.samples = {}
 
     def __repr__(self):
         print_message = ''
@@ -118,6 +127,31 @@ class Particle:
                 component_displace[dimension_number] = dimension_upperbound - \
                                                        rebound_displace
 
+    def quantize_position(self):
+        """
+            integer position
+            from position = 0
+            to position < self.solution_space_sizes[<dim>]
+        """
+        self.position = np.array(self.position + 0.5, dtype=np.int16)
+        position_control = self.position < self.solution_space_sizes
+        position_valid = self.position * np.equal(position_control, True)
+        position_correct = (self.solution_space_sizes - 1) * np.equal(
+            position_control, False)
+        self.position = np.array(position_valid + position_correct,
+                                 dtype=np.int16)
+
+    def sample_gain_function(self):
+        position = self.position[0], self.position[1]
+        value = self.gain_function(*position)
+        print(value)
+        try:
+            if value > max(self.samples):
+                self.best = position
+        except ValueError:
+            pass
+        self.samples[value] = position
+
     def perturb(self):
         intertial_displace = self.speed - 0
         cognitive_displace = self.best - self.position
@@ -130,27 +164,26 @@ class Particle:
         self.bouncing(social_term)
         self.speed = intertial_term + cognitive_term + social_term
         self.position = self.position + self.speed
+        self.quantize_position()
+        self.sample_gain_function()
 
 
 class PSO:
 
-    def __init__(self, parameters, particle_amount):
+    def __init__(self, gain_function, parameters, particle_amount=3):
+        self.gain_function = gain_function
         self.parameters = parameters
         self.particle_amount = particle_amount
         self.parameter_types = [parameter.samples_type
                                 for parameter in self.parameters]
-        # print(self.parameter_types)
-        # if np.float16 in self.parameter_types:
-        #     self.position_type = np.float16
-        # else:
-        #     self.position_type = np.int16
         self.solution_space_sizes = np.array(
             [parameter.samples.size for parameter in self.parameters],
             dtype=np.int16)
         self.solution_dimensions = len(self.solution_space_sizes)
         self.particle_space = np.zeros(0, dtype=np.byte)
         self.init_particle_space()
-        self.particle_result = Particle(self.solution_space_sizes)
+        self.particle_result = Particle(self.gain_function,
+                                        self.solution_space_sizes)
         self.result_space = np.zeros(0, dtype=np.byte)
         self.build_result_space()
 
@@ -162,17 +195,9 @@ class PSO:
         # print_message += '{0}\n'.format(self.result_space)
         return print_message
 
-    # def get_parameters_types(self):
-    #     parameters_names = ['p{0}'.format(parameter_number)
-    #                         for parameter_number in range(len(self.parameters))]
-    #     parameters_types = [parameter.samples_type
-    #                         for parameter in self.parameters]
-    #     self.parameters_types = np.dtype(zip(parameters_names,
-    #                                          parameters_types))
-    #     return self.parameters_types
-
     def init_particle_space(self):
-        self.particle_space = [Particle(self.solution_space_sizes)
+        self.particle_space = [Particle(self.gain_function,
+                                        self.solution_space_sizes)
                                for particle_number
                                in range(self.particle_amount)]
         for particle in self.particle_space:
@@ -195,17 +220,52 @@ class PSO:
         return True
 
 
+class Mountain:
+
+    def __init__(self, param_1_dim, param_2_dim):
+        filename = cbook.get_sample_data('jacksboro_fault_dem.npz',
+                                         asfileobj=False)
+        with np.load(filename) as dem:
+            z = dem['elevation']
+            nrows, ncols = z.shape
+            x = np.linspace(dem['xmin'], dem['xmax'], ncols)
+            y = np.linspace(dem['ymin'], dem['ymax'], nrows)
+            x, y = np.meshgrid(x, y)
+            region = np.s_[0:param_1_dim, 0:param_2_dim]
+            self.x, self.y, self.z = x[region], y[region], z[region]
+
+    def altitude_function(self, param_1, param_2):
+        return self.z[param_1, param_2]
+
+    def surface_plot_2d(self):
+        fig, ax = plt.subplots()
+        ax.imshow(self.z, interpolation='nearest')
+        plt.show()
+
+    def surface_plot_3d(self):
+        fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+        ls = LightSource(270, 45)
+        rgb = ls.shade(self.z, cmap=cm.gist_earth, vert_exag=0.1,
+                       blend_mode='soft')
+        ax.plot_surface(self.x, self.y, self.z, rstride=1, cstride=1,
+                        facecolors=rgb, linewidth=0, antialiased=False,
+                        shade=False)
+        plt.show()
+
+
 def main():
-    param_1 = ParameterSampling(0, 2, 5)
-    param_2 = ParameterSampling(0., 10, 7)
-    param_3 = ParameterSampling(0, 1, 2)
-    params = [param_1, param_2, param_3]
-    pso_test = PSO(params, 3)
-    print('*** INIT ***')
-    print(pso_test)
-    pso_test.iter_particle_swarm()
-    print('*** ITER 1 ***')
-    print(pso_test)
+    param_1 = ParameterSampling(0, 99, 100)
+    param_2 = ParameterSampling(0, 99, 100)
+    params = [param_1, param_2]
+    # print(params)
+    fnc = Mountain(100, 100)
+    gain_function = fnc.altitude_function
+    fnc.surface_plot_2d()
+    pso = PSO(gain_function, params, 3)
+    for k in range(10):
+        print('*** start iter ***')
+        pso.iter_particle_swarm()
+        print('')
 
 
 if __name__ == '__main__':
