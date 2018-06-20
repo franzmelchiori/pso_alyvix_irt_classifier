@@ -32,6 +32,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cbook
 from matplotlib import cm
 from matplotlib.colors import LightSource
+import matplotlib.animation as animation
 
 
 class ParameterSampling:
@@ -74,8 +75,8 @@ class ParameterSampling:
 
 class Particle:
 
-    def __init__(self, gain_function, solution_space_sizes, inertial_weight=1.,
-                 cognitive_weight=1., social_weight=1):
+    def __init__(self, gain_function, solution_space_sizes, inertial_weight=.1,
+                 cognitive_weight=1., social_weight=.5):
         self.gain_function = gain_function
         self.solution_space_sizes = solution_space_sizes
         self.solution_dimensions = len(self.solution_space_sizes)
@@ -144,13 +145,12 @@ class Particle:
     def sample_gain_function(self):
         position = self.position[0], self.position[1]
         value = self.gain_function(*position)
-        print(value)
         try:
             if value > max(self.samples):
                 self.best = position
         except ValueError:
             pass
-        self.samples[value] = position
+        self.samples = self.position[0], self.position[1], value
 
     def perturb(self):
         intertial_displace = self.speed - 0
@@ -214,10 +214,20 @@ class PSO:
         self.result_space = np.zeros(parameters_sizes, dtype=np.float16)
         return self.result_space
 
-    def iter_particle_swarm(self):
+    def iter_particle_swarm(self, iterations=30):
+        particles_data = []
         for particle in self.particle_space:
-            particle.perturb()
-        return True
+            particle_data = np.empty((self.solution_dimensions + 1, iterations))
+            particles_data.append(particle_data)
+        for i in range(iterations):
+            print('*** start iter {0}***'.format(i+1))
+            for particle, particle_data in zip(self.particle_space,
+                                               particles_data):
+                particle.perturb()
+                particle_data[:, i] = particle.samples
+                print(particle.samples)
+            print('')
+        return particles_data
 
 
 class Mountain:
@@ -242,30 +252,72 @@ class Mountain:
         ax.imshow(self.z, interpolation='nearest')
         plt.show()
 
-    def surface_plot_3d(self):
+    def particle_trajectory(self, particle_data):
+        p = particle_data
+        iterations = len(particle_data[0])
+        dimensions = 3
+        lineData = np.empty((dimensions, iterations))
+        for i in range(iterations):
+            lineData[:, i] = self.x[int(p[0, i]), int(p[1, i])], \
+                             self.y[int(p[0, i]), int(p[1, i])], \
+                             self.z[int(p[0, i]), int(p[1, i])]
+        return lineData
+
+    def update_lines(self, num, dataLines, lines):
+        for line, data in zip(lines, dataLines):
+            line.set_data(data[0:2, :num])
+            line.set_3d_properties(data[2, :num])
+        return lines
+
+    # def update_points(self, i, particles_data, points):
+    #     for points, particle_data in zip(points, particles_data):
+    #         points.set_3d_properties(self.x[int(particle_data[0][i]), int(particle_data[1][i])],
+    #                                  self.y[int(particle_data[0][i]), int(particle_data[1][i])],
+    #                                  self.z[int(particle_data[0][i]), int(particle_data[1][i])] + 10)
+    #     return points
+
+    def surface_plot_3d(self, particles_data):
+        iterations = len(particles_data[0][0])
         fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
-        ls = LightSource(270, 45)
-        rgb = ls.shade(self.z, cmap=cm.gist_earth, vert_exag=0.1,
-                       blend_mode='soft')
-        ax.plot_surface(self.x, self.y, self.z, rstride=1, cstride=1,
-                        facecolors=rgb, linewidth=0, antialiased=False,
-                        shade=False)
+        ax.plot_surface(self.x, self.y, self.z)
+
+        data = [self.particle_trajectory(particle_data)
+                for particle_data in particles_data]
+        lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1])[0]
+                 for dat in data]
+
+        line_ani = animation.FuncAnimation(fig=fig,
+                                           func=self.update_lines,
+                                           frames=iterations,
+                                           fargs=(data, lines),
+                                           interval=50,
+                                           blit=False)
+
+        # points = [ax.scatter3D(self.x[int(p[0][1]), int(p[1][1])],
+        #                        self.y[int(p[0][1]), int(p[1][1])],
+        #                        self.z[int(p[0][1]), int(p[1][1])]+10,
+        #                        s=30, c='r') for p in particles_data]
+        # line_ani = animation.FuncAnimation(fig=fig,
+        #                                    func=self.update_points,
+        #                                    frames=5,
+        #                                    fargs=(particles_data, points),
+        #                                    interval=24,
+        #                                    repeat=False,
+        #                                    blit=False)
+
         plt.show()
 
 
 def main():
-    param_1 = ParameterSampling(0, 99, 100)
-    param_2 = ParameterSampling(0, 99, 100)
+    param_1 = ParameterSampling(0, 49, 50)
+    param_2 = ParameterSampling(0, 49, 50)
     params = [param_1, param_2]
     # print(params)
-    fnc = Mountain(100, 100)
+    fnc = Mountain(50, 50)
     gain_function = fnc.altitude_function
-    fnc.surface_plot_2d()
-    pso = PSO(gain_function, params, 3)
-    for k in range(10):
-        print('*** start iter ***')
-        pso.iter_particle_swarm()
-        print('')
+    pso = PSO(gain_function, params, 10)
+    particles_data = pso.iter_particle_swarm()
+    fnc.surface_plot_3d(particles_data)
 
 
 if __name__ == '__main__':
