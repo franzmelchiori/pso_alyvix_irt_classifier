@@ -308,7 +308,7 @@ class Mountain:
 
         animate_trajectories = animation.FuncAnimation(
             fig=fig, func=self.update_trajectories, frames=iterations,
-            fargs=(data, lines), interval=1000, blit=False)
+            fargs=(data, lines), interval=24, blit=False)
         plt.show()
 
 
