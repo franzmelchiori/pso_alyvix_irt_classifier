@@ -184,7 +184,8 @@ class Particle:
 class PSO:
 
     def __init__(self, gain_function, parameters, iterations, particle_amount=3,
-                 inertial_weight=1., cognitive_weight=1., social_weight=1.):
+                 inertial_weight=1., cognitive_weight=1., social_weight=1.,
+                 verbose=False):
         self.gain_function = gain_function
         self.parameters = parameters
         self.iterations = iterations
@@ -202,10 +203,15 @@ class PSO:
             inertial_weight=self.inertial_weight,
             cognitive_weight=self.cognitive_weight,
             social_weight=self.social_weight, serial_number=0)
-        self.result_space = self.init_result_space()
+        self.verbose = verbose
 
     def __repr__(self):
         print_message = ''
+        print_message += "*** PSO\n"
+        print_message += "*** Best position: {0}\n" \
+                         "".format(self.particle_result.best_swarm)
+        print_message += "*** Best value: {0}" \
+                         "".format(self.particle_result.best_swarm_value)
         return print_message
 
     def init_particle_space(self):
@@ -224,12 +230,6 @@ class PSO:
             particle.set_position(position)
         return self.particle_space
 
-    def init_result_space(self):
-        parameters_sizes = [parameter.samples.size
-                            for parameter in self.parameters]
-        self.result_space = np.zeros(parameters_sizes, dtype=np.float16)
-        return self.result_space
-
     def iter_particle_swarm(self):
         particles_data = []
         for particle in self.particle_space:
@@ -237,7 +237,6 @@ class PSO:
                                       self.iterations))
             particles_data.append(particle_data)
         for i in range(self.iterations):
-            print('** Iteration {0}'.format(i+1))
             for particle, particle_data in zip(self.particle_space,
                                                particles_data):
                 sample = particle.perturb()
@@ -247,11 +246,11 @@ class PSO:
                     self.particle_result.best_swarm = particle.position
                     self.particle_result.best_swarm_value = value
                 particle_data[:, i] = sample
-                print(particle)
+                if self.verbose:
+                    print('** Iteration {0}'.format(i+1))
+                    print(particle)
             for particle in self.particle_space:
                 particle.set_best_swarm(self.particle_result.best_swarm)
-            print(self.particle_result)
-            print('')
         return particles_data
 
 
@@ -324,21 +323,22 @@ def main():
     s = 100
     i = 10
     p = 10
-    iw = .5
+    iw = .75
     cw = .5
     sw = .5
+    v = True
+
     param_1 = ParameterSampling(0, s-1, s)
     param_2 = ParameterSampling(0, s-1, s)
-    param_3 = ParameterSampling(0, s-1, s)
-    param_4 = ParameterSampling(0, s-1, s)
-    params = [param_1, param_2, param_3, param_4]
+    params = [param_1, param_2]
     # print(params)
     fnc = Mountain(s, s)
     gain_function = fnc.altitude_function
     pso = PSO(gain_function=gain_function, parameters=params, iterations=i,
               particle_amount=p, inertial_weight=iw, cognitive_weight=cw,
-              social_weight=sw)
+              social_weight=sw, verbose=v)
     particles_data = pso.iter_particle_swarm()
+    print(pso)
     fnc.surface_plot_3d(particles_data)
 
 
