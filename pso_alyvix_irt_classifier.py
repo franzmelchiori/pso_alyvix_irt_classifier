@@ -28,7 +28,10 @@ import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
+
 from matplotlib import cbook
+from matplotlib.colors import LightSource
+from matplotlib import cm
 
 
 class ParameterSampling:
@@ -203,10 +206,6 @@ class PSO:
 
     def __repr__(self):
         print_message = ''
-        # print_message += '{0}\n'.format(self.parameters_types)
-        for particle in self.particle_space:
-            print_message += '{0}\n\n'.format(particle)
-        # print_message += '{0}\n'.format(self.result_space)
         return print_message
 
     def init_particle_space(self):
@@ -244,12 +243,10 @@ class PSO:
                 sample = particle.perturb()
                 value = sample[-1]
                 sampled_best_value = self.particle_result.best_swarm_value
-                if value > sampled_best_value:
+                if value >= sampled_best_value:
                     self.particle_result.best_swarm = particle.position
                     self.particle_result.best_swarm_value = value
-                particle_data[:, i] = sample[0], sample[1], value
-                # print('particle sample: {}, {}, {}'.format(
-                #     sample[0], sample[1], value))
+                particle_data[:, i] = sample
                 print(particle)
             for particle in self.particle_space:
                 particle.set_best_swarm(self.particle_result.best_swarm)
@@ -300,7 +297,13 @@ class Mountain:
     def surface_plot_3d(self, particles_data):
         iterations = len(particles_data[0][0])
         fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
-        ax.plot_surface(self.x, self.y, self.z)
+
+        ls = LightSource(270, 45)
+        rgb = ls.shade(self.z, cmap=cm.gist_earth, vert_exag=0.1,
+                       blend_mode='soft')
+
+        ax.plot_surface(self.x, self.y, self.z, facecolors=rgb,
+                        antialiased=True)
 
         data = [self.particle_trajectory(particle_data)
                 for particle_data in particles_data]
@@ -318,19 +321,23 @@ class Mountain:
 
 
 def main():
-    s = 300
+    s = 100
     i = 10
     p = 10
+    iw = .5
+    cw = .5
+    sw = .5
     param_1 = ParameterSampling(0, s-1, s)
     param_2 = ParameterSampling(0, s-1, s)
     param_3 = ParameterSampling(0, s-1, s)
-    params = [param_1, param_2]
+    param_4 = ParameterSampling(0, s-1, s)
+    params = [param_1, param_2, param_3, param_4]
     # print(params)
     fnc = Mountain(s, s)
     gain_function = fnc.altitude_function
     pso = PSO(gain_function=gain_function, parameters=params, iterations=i,
-              particle_amount=p, inertial_weight=.5, cognitive_weight=.1,
-              social_weight=1.)
+              particle_amount=p, inertial_weight=iw, cognitive_weight=cw,
+              social_weight=sw)
     particles_data = pso.iter_particle_swarm()
     fnc.surface_plot_3d(particles_data)
 
