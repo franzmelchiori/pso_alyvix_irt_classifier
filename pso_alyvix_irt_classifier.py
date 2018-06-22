@@ -313,15 +313,18 @@ class Mountain:
 
 
 def main():
-    param_1 = ParameterSampling(0, 49, 50)
-    param_2 = ParameterSampling(0, 49, 50)
-    param_3 = ParameterSampling(0, 99, 100)
+    s = 300
+    i = 5
+    p = 3
+    param_1 = ParameterSampling(0, s-1, s)
+    param_2 = ParameterSampling(0, s-1, s)
+    param_3 = ParameterSampling(0, s-1, s)
     params = [param_1, param_2]
     # print(params)
-    fnc = Mountain(50, 50)
+    fnc = Mountain(s, s)
     gain_function = fnc.altitude_function
-    pso = PSO(gain_function=gain_function, parameters=params, iterations=10,
-              particle_amount=10, inertial_weight=.5, cognitive_weight=.5,
+    pso = PSO(gain_function=gain_function, parameters=params, iterations=i,
+              particle_amount=p, inertial_weight=.5, cognitive_weight=.5,
               social_weight=1.)
     particles_data = pso.iter_particle_swarm()
     fnc.surface_plot_3d(particles_data)
