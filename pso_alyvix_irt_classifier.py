@@ -93,11 +93,29 @@ class Particle:
 
     def __repr__(self):
         print_message = ''
-        print_message += "Particle weights: '{0}'\n".format(self.weight)
-        print_message += "Particle randoms: '{0}'\n".format(self.random)
-        print_message += "Particle speed: '{0}'\n".format(self.speed)
-        print_message += "Particle position: '{0}'\n".format(self.position)
-        print_message += "Particle best position: '{0}'".format(self.best)
+        if self.serial_number == 0:
+            print_message += "    * Swarm\n"
+            print_message += "        Best position: {0}\n" \
+                             "".format(self.best_swarm)
+            print_message += "        Best value: {0}" \
+                             "".format(self.best_swarm_value)
+        else:
+            print_message += "    * Particle {0}\n" \
+                             "".format(self.serial_number)
+            print_message += "        Weights: {0}\n" \
+                             "".format(self.weight)
+            print_message += "        Randoms: {0}\n" \
+                             "".format(self.random)
+            print_message += "        Speed: {0}\n" \
+                             "".format(self.speed)
+            print_message += "        Position: {0}\n" \
+                             "".format(self.position)
+            print_message += "        Best position: {0}\n" \
+                             "".format(self.best)
+            print_message += "        Best value: {0}\n" \
+                             "".format(self.best_value)
+            print_message += "        Last sample: {0}" \
+                             "".format(self.samples[-1])
         return print_message
 
     def set_random(self):
@@ -114,11 +132,6 @@ class Particle:
         self.best_swarm = position
 
     def quantize_vector(self, vector):
-        """
-            integer position
-            from position = 0
-            to position < self.solution_sizes[<dim>]
-        """
         vector_expanded = np.array(vector + 0.5, dtype=np.int16)
         position_control = vector_expanded < self.solution_sizes
         position_valid = vector_expanded * np.equal(position_control, True)
@@ -126,13 +139,6 @@ class Particle:
             position_control, False)
         vector = np.array(position_valid + position_correct, dtype=np.int16)
         return vector
-        # self.position = np.array(self.position + 0.5, dtype=np.int16)
-        # position_control = self.position < self.solution_sizes
-        # position_valid = self.position * np.equal(position_control, True)
-        # position_correct = (self.solution_sizes - 1) * np.equal(
-        #     position_control, False)
-        # self.position = np.array(position_valid + position_correct,
-        #                          dtype=np.int16)
 
     def sample_gain_function(self):
         function_parameters = []
@@ -192,7 +198,7 @@ class PSO:
             solution_space_sizes=self.solution_sizes,
             inertial_weight=self.inertial_weight,
             cognitive_weight=self.cognitive_weight,
-            social_weight=self.social_weight, serial_number='r')
+            social_weight=self.social_weight, serial_number=0)
         self.result_space = self.init_result_space()
 
     def __repr__(self):
@@ -209,7 +215,7 @@ class PSO:
             solution_space_sizes=self.solution_sizes,
             inertial_weight=self.inertial_weight,
             cognitive_weight=self.cognitive_weight,
-            social_weight=self.social_weight, serial_number=particle_number)
+            social_weight=self.social_weight, serial_number=particle_number+1)
             for particle_number in range(self.particle_amount)]
         for particle in self.particle_space:
             position = np.array([random.randint(0, coordinate_size - 1)
@@ -228,10 +234,11 @@ class PSO:
     def iter_particle_swarm(self):
         particles_data = []
         for particle in self.particle_space:
-            particle_data = np.empty((len(self.solution_sizes) + 1, self.iterations))
+            particle_data = np.empty((len(self.solution_sizes) + 1,
+                                      self.iterations))
             particles_data.append(particle_data)
         for i in range(self.iterations):
-            print('*** start iter {0}***'.format(i+1))
+            print('** Iteration {0}'.format(i+1))
             for particle, particle_data in zip(self.particle_space,
                                                particles_data):
                 sample = particle.perturb()
@@ -241,14 +248,12 @@ class PSO:
                     self.particle_result.best_swarm = particle.position
                     self.particle_result.best_swarm_value = value
                 particle_data[:, i] = sample[0], sample[1], value
-                print('particle sample: {}, {}, {}'.format(
-                    sample[0], sample[1], value))
+                # print('particle sample: {}, {}, {}'.format(
+                #     sample[0], sample[1], value))
+                print(particle)
             for particle in self.particle_space:
                 particle.set_best_swarm(self.particle_result.best_swarm)
-            print('best swarm position: {}'.format(
-                self.particle_result.best_swarm))
-            print('best swarm value: {}'.format(
-                self.particle_result.best_swarm_value))
+            print(self.particle_result)
             print('')
         return particles_data
 
@@ -314,8 +319,8 @@ class Mountain:
 
 def main():
     s = 300
-    i = 5
-    p = 3
+    i = 10
+    p = 10
     param_1 = ParameterSampling(0, s-1, s)
     param_2 = ParameterSampling(0, s-1, s)
     param_3 = ParameterSampling(0, s-1, s)
@@ -324,7 +329,7 @@ def main():
     fnc = Mountain(s, s)
     gain_function = fnc.altitude_function
     pso = PSO(gain_function=gain_function, parameters=params, iterations=i,
-              particle_amount=p, inertial_weight=.5, cognitive_weight=.5,
+              particle_amount=p, inertial_weight=.5, cognitive_weight=.1,
               social_weight=1.)
     particles_data = pso.iter_particle_swarm()
     fnc.surface_plot_3d(particles_data)
