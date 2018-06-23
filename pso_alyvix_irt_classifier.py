@@ -33,6 +33,8 @@ from matplotlib import cbook
 from matplotlib.colors import LightSource
 from matplotlib import cm
 
+import cv2
+
 
 class ParameterSampling:
 
@@ -342,5 +344,21 @@ def main():
     fnc.surface_plot_3d(particles_data)
 
 
+def test_irt_classifier():
+    import alyvix_irt_classifier.contouring as irt
+
+    contouring = irt.Contouring()
+    numpy_matrix = contouring.auto_contouring('alyvix_irt_classifier/test_img.png',
+                                              scaling_factor=2.0)
+    print(numpy_matrix)
+
+    debug_matrix = contouring.get_debug_matrix()
+    debug_image = contouring.get_debug_image()
+
+    cv2.imwrite("alyvix_irt_classifier/debug_matrix.png", debug_matrix)
+    cv2.imwrite("alyvix_irt_classifier/debug_image.png", debug_image)
+
+
 if __name__ == '__main__':
-    main()
+    # main()
+    test_irt_classifier()

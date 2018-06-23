@@ -1,6 +1,9 @@
 # pycharm
 .idea
 
+# Alyvix IRT Classifier
+alyvix_irt_classifier/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
