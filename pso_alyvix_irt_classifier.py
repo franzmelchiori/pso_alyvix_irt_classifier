@@ -360,5 +360,5 @@ def test_irt_classifier():
 
 
 if __name__ == '__main__':
-    # main()
-    test_irt_classifier()
+    main()
+    # test_irt_classifier()
