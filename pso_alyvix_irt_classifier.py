@@ -321,7 +321,7 @@ class Mountain:
         plt.show()
 
 
-def main():
+def test_ps_optimizer():
     s = 100
     i = 10
     p = 10
@@ -348,17 +348,120 @@ def test_irt_classifier():
     import alyvix_irt_classifier.contouring as irt
 
     contouring = irt.Contouring()
-    numpy_matrix = contouring.auto_contouring('alyvix_irt_classifier/test_img.png',
-                                              scaling_factor=2.0)
+    numpy_matrix = contouring.auto_contouring(
+        'alyvix_irt_classifier/image_to_classify_01.png', scaling_factor=2.0)
     print(numpy_matrix)
 
     debug_matrix = contouring.get_debug_matrix()
     debug_image = contouring.get_debug_image()
-
     cv2.imwrite("alyvix_irt_classifier/debug_matrix.png", debug_matrix)
     cv2.imwrite("alyvix_irt_classifier/debug_image.png", debug_image)
 
 
+def main():
+    """
+        https://docs.opencv.org/2.4.9/modules/imgproc/doc/
+            feature_detection.html?highlight=canny#canny
+            feature_detection.html?highlight=canny#houghlinesp
+            filtering.html#getstructuringelement
+    """
+    import alyvix_irt_classifier.contouring as irt
+
+    i = 10
+    p = 10
+    iw = .75
+    cw = .5
+    sw = .5
+    v = True
+
+    canny_threshold1 = ParameterSampling(0, 300, 7)
+    canny_threshold2 = ParameterSampling(0, 300, 7)
+    canny_apertureSize = ParameterSampling(3, 6, 4)
+    hough_threshold = ParameterSampling(1, 10, 10)
+    hough_minLineLength = ParameterSampling(1, 10, 10)
+    hough_maxLineGap = ParameterSampling(1, 10, 10)
+    line_angle_cancel = ParameterSampling(0, 9, 10)
+    ellipse_width = ParameterSampling(2, 10, 9)
+    ellipse_height = ParameterSampling(2, 10, 9)
+    text_roi_emptiness = ParameterSampling(0., 1, 11)
+    text_roi_proportion = ParameterSampling(0., 3, 11)
+    image_roi_emptiness = ParameterSampling(0., 1, 11)
+    vline_hw_proportion = ParameterSampling(1, 10, 10)
+    vline_w_maxsize = ParameterSampling(1, 10, 10)
+    hline_wh_proportion = ParameterSampling(1, 10, 10)
+    hline_h_maxsize = ParameterSampling(1, 10, 10)
+    rect_w_minsize = ParameterSampling(1, 10, 10)
+    rect_h_minsize = ParameterSampling(1, 10, 10)
+    rect_w_maxsize_01 = ParameterSampling(600, 1000, 5)
+    rect_h_maxsize_01 = ParameterSampling(50, 250, 5)
+    rect_w_maxsize_02 = ParameterSampling(50, 250, 5)
+    rect_h_maxsize_02 = ParameterSampling(600, 1000, 5)
+    rect_hw_proportion = ParameterSampling(1, 10, 10)
+    rect_hw_w_maxsize = ParameterSampling(1, 10, 10)
+    rect_wh_proportion = ParameterSampling(1, 10, 10)
+    rect_wh_h_maxsize = ParameterSampling(1, 10, 10)
+    hrect_proximity = ParameterSampling(2, 20, 10)
+    vrect_proximity = ParameterSampling(2, 20, 10)
+    vrect_others_proximity = ParameterSampling(20, 200, 10)
+    hrect_others_proximity = ParameterSampling(20, 200, 10)
+    params = [canny_threshold1, canny_threshold2, canny_apertureSize,
+              hough_threshold, hough_minLineLength, hough_maxLineGap,
+              line_angle_cancel, ellipse_width, ellipse_height,
+              text_roi_emptiness, text_roi_proportion, rect_w_minsize,
+              rect_h_minsize, rect_w_maxsize_01, rect_h_maxsize_01,
+              rect_w_maxsize_02, rect_h_maxsize_02, rect_hw_proportion,
+              rect_hw_w_maxsize, rect_wh_proportion, rect_wh_h_maxsize,
+              hrect_proximity, vrect_proximity, vrect_others_proximity,
+              hrect_others_proximity]
+
+    contouring = irt.Contouring(
+        canny_threshold1.samples[0],
+        canny_threshold2.samples[0],
+        canny_apertureSize.samples[0],
+        hough_threshold.samples[0],
+        hough_minLineLength.samples[0],
+        hough_maxLineGap.samples[0],
+        line_angle_cancel.samples[0],
+        ellipse_width.samples[0],
+        ellipse_height.samples[0],
+        text_roi_emptiness.samples[0],
+        text_roi_proportion.samples[0],
+        image_roi_emptiness.samples[0],
+        vline_hw_proportion.samples[0],
+        vline_w_maxsize.samples[0],
+        hline_wh_proportion.samples[0],
+        hline_h_maxsize.samples[0],
+        rect_w_minsize.samples[0],
+        rect_h_minsize.samples[0],
+        rect_w_maxsize_01.samples[0],
+        rect_h_maxsize_01.samples[0],
+        rect_w_maxsize_02.samples[0],
+        rect_h_maxsize_02.samples[0],
+        rect_hw_proportion.samples[0],
+        rect_hw_w_maxsize.samples[0],
+        rect_wh_proportion.samples[0],
+        rect_wh_h_maxsize.samples[0],
+        hrect_proximity.samples[0],
+        vrect_proximity.samples[0],
+        vrect_others_proximity.samples[0],
+        hrect_others_proximity.samples[0]
+    )
+    numpy_matrix = contouring.auto_contouring(
+        'alyvix_irt_classifier/image_to_classify_01.png')
+    # cv2.imwrite("numpy_matrix_i.png", numpy_matrix[:, :, 0]*255)
+    # cv2.imwrite("numpy_matrix_r.png", numpy_matrix[:, :, 1]*255)
+    # cv2.imwrite("numpy_matrix_t.png", numpy_matrix[:, :, 2]*255)
+
+    # gain_function =
+
+    # pso = PSO(gain_function=gain_function, parameters=params, iterations=i,
+    #           particle_amount=p, inertial_weight=iw, cognitive_weight=cw,
+    #           social_weight=sw, verbose=v)
+    # particles_data = pso.iter_particle_swarm()
+    # print(pso)
+
+
 if __name__ == '__main__':
-    main()
+    test_ps_optimizer()
     # test_irt_classifier()
+    # main()
