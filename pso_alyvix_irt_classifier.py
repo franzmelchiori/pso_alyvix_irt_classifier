@@ -187,7 +187,7 @@ class PSO:
 
     def __init__(self, gain_function, parameters, iterations, particle_amount=3,
                  inertial_weight=1., cognitive_weight=1., social_weight=1.,
-                 verbose=False):
+                 verbose=0):
         self.gain_function = gain_function
         self.parameters = parameters
         self.iterations = iterations
@@ -241,7 +241,7 @@ class PSO:
                                       self.iterations))
             particles_data.append(particle_data)
         for i in range(self.iterations):
-            if self.verbose:
+            if self.verbose>=1:
                 print('** Iteration {0}'.format(i+1))
             for particle, particle_data in zip(self.particle_space,
                                                particles_data):
@@ -252,7 +252,7 @@ class PSO:
                     self.particle_result.best_swarm = particle.position
                     self.particle_result.best_swarm_value = value
                 particle_data[:, i] = sample
-                if self.verbose:
+                if self.verbose>=2:
                     print(particle)
             for particle in self.particle_space:
                 particle.set_best_swarm(self.particle_result.best_swarm)
@@ -442,7 +442,7 @@ def test_ps_optimizer():
     iw = .75
     cw = .5
     sw = .5
-    v = True
+    v = 2
 
     param_1 = ParameterSampling(0, s-1, s)
     param_2 = ParameterSampling(0, s-1, s)
@@ -521,20 +521,13 @@ def test_labellikelihood(path_image_to_irt_classify, path_ground_truth_image,
     print(ll)
 
 
-def pso_irtc():
+def pso_irtc(i=10, p=3, iw=.75, cw=.5, sw=.5, v=1):
     """
         https://docs.opencv.org/2.4.9/modules/imgproc/doc/
             feature_detection.html?highlight=canny#canny
             feature_detection.html?highlight=canny#houghlinesp
             filtering.html#getstructuringelement
     """
-
-    i = 100
-    p = 100
-    iw = .75
-    cw = .5
-    sw = .5
-    v = True
 
     canny_threshold1 = ParameterSampling(0, 300, 7)
     canny_threshold2 = ParameterSampling(0, 300, 7)
@@ -599,6 +592,6 @@ if __name__ == '__main__':
     # test_irt_classifier(image_to_classify, man_params)
     # test_ground_truth(image_ground_truth)
     # test_labellikelihood(image_to_classify, image_ground_truth, man_params)
-    # pso_irtc()
+    # pso_irtc(i=3, p=3, iw=.75, cw=.5, sw=.5, v=1)
 
     test_ps_optimizer()
