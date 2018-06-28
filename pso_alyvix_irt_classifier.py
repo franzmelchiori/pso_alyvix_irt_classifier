@@ -209,11 +209,13 @@ class PSO:
 
     def __repr__(self):
         print_message = ''
-        print_message += "*** PSO\n"
-        print_message += "*** Best position: {0}\n" \
-                         "".format(self.particle_result.best_swarm)
-        print_message += "*** Best value: {0}" \
-                         "".format(self.particle_result.best_swarm_value)
+        print_message += '*** PSO\n'
+        solution_values = [self.parameters[i].samples[p]
+                           for i, p
+                           in enumerate(self.particle_result.best_swarm)]
+        result_value = self.particle_result.best_swarm_value
+        print_message += '*** Best solution: {0}\n'.format(solution_values)
+        print_message += '*** Best result: {0}'.format(result_value)
         return print_message
 
     def init_particle_space(self):
@@ -239,6 +241,8 @@ class PSO:
                                       self.iterations))
             particles_data.append(particle_data)
         for i in range(self.iterations):
+            if self.verbose:
+                print('** Iteration {0}'.format(i+1))
             for particle, particle_data in zip(self.particle_space,
                                                particles_data):
                 sample = particle.perturb()
@@ -249,11 +253,121 @@ class PSO:
                     self.particle_result.best_swarm_value = value
                 particle_data[:, i] = sample
                 if self.verbose:
-                    print('** Iteration {0}'.format(i+1))
                     print(particle)
             for particle in self.particle_space:
                 particle.set_best_swarm(self.particle_result.best_swarm)
         return particles_data
+
+
+class GroundTruth:
+    def __init__(self, path_image):
+        self.path_image = path_image
+        self.ground_truth_image = cv2.imread(self.path_image)
+        self.channel_i = self.ground_truth_image[:, :, 2]/255
+        self.channel_r = self.ground_truth_image[:, :, 1]/255
+        self.channel_t = self.ground_truth_image[:, :, 0]/255
+
+    def save_ground_truth_channels(self):
+        folder_ground_truth_channels = '/'.join(
+            self.path_image.split('/')[:-1]) + '/'
+        cv2.imwrite(folder_ground_truth_channels + 'ground_truth_i.png',
+                    self.channel_i*255)
+        cv2.imwrite(folder_ground_truth_channels + 'ground_truth_r.png',
+                    self.channel_r*255)
+        cv2.imwrite(folder_ground_truth_channels + 'ground_truth_t.png',
+                    self.channel_t*255)
+
+
+class LabelLikelihood:
+    def __init__(self, path_image_to_irt_classify, path_ground_truth_image):
+        self.path_image_to_irt_classify = path_image_to_irt_classify
+        self.gt = GroundTruth(path_ground_truth_image)
+        shape_image = self.gt.ground_truth_image.shape
+        self.irt_image = np.zeros(shape_image, dtype=np.uint8)
+        self.irt_image_i = np.zeros(shape_image, dtype=np.uint8)
+        self.irt_image_r = np.zeros(shape_image, dtype=np.uint8)
+        self.irt_image_t = np.zeros(shape_image, dtype=np.uint8)
+        self.likelihood_i = 0.
+        self.likelihood_r = 0.
+        self.likelihood_t = 0.
+        self.irt_likelihood = 0
+
+    def __repr__(self):
+        print_message = ''
+        print_message += "    * Likelihood\n"
+        print_message += "        I: {0}\n" \
+                         "".format(self.likelihood_i)
+        print_message += "        R: {0}\n" \
+                         "".format(self.likelihood_r)
+        print_message += "        T: {0}\n" \
+                         "".format(self.likelihood_t)
+        print_message += "        IRT: {0}\n" \
+                         "".format(self.irt_likelihood)
+        return print_message
+
+    def run_irt_classifier(self, params):
+        import alyvix_irt_classifier.contouring as irt
+        canny_threshold1 = params[0]
+        canny_threshold2 = params[1]
+        canny_apertureSize = params[2]
+        hough_threshold = params[3]
+        hough_minLineLength = params[4]
+        hough_maxLineGap = params[5]
+        line_angle_tolerance = params[6]
+        ellipse_width = params[7]
+        ellipse_height = params[8]
+        text_roi_emptiness = params[9]
+        text_roi_proportion = params[10]
+        image_roi_emptiness = params[11]
+        vline_hw_proportion = params[12]
+        vline_w_maxsize = params[13]
+        hline_wh_proportion = params[14]
+        hline_h_maxsize = params[15]
+        rect_w_minsize = params[16]
+        rect_h_minsize = params[17]
+        rect_w_maxsize_01 = params[18]
+        rect_h_maxsize_01 = params[19]
+        rect_w_maxsize_02 = params[20]
+        rect_h_maxsize_02 = params[21]
+        rect_hw_proportion = params[22]
+        rect_hw_w_maxsize = params[23]
+        rect_wh_proportion = params[24]
+        rect_wh_h_maxsize = params[25]
+        hrect_proximity = params[26]
+        vrect_proximity = params[27]
+        vrect_others_proximity = params[28]
+        hrect_others_proximity = params[29]
+
+        irt_classification = irt.Contouring(
+            canny_threshold1, canny_threshold2, canny_apertureSize,
+            hough_threshold, hough_minLineLength, hough_maxLineGap,
+            line_angle_tolerance, ellipse_width, ellipse_height,
+            text_roi_emptiness, text_roi_proportion, image_roi_emptiness,
+            vline_hw_proportion, vline_w_maxsize, hline_wh_proportion,
+            hline_h_maxsize, rect_w_minsize, rect_h_minsize, rect_w_maxsize_01,
+            rect_h_maxsize_01, rect_w_maxsize_02, rect_h_maxsize_02,
+            rect_hw_proportion, rect_hw_w_maxsize, rect_wh_proportion,
+            rect_wh_h_maxsize, hrect_proximity, vrect_proximity,
+            vrect_others_proximity, hrect_others_proximity)
+        self.irt_image = irt_classification.auto_contouring(
+            self.path_image_to_irt_classify)
+
+    def measure_irt_likelihood(self, params):
+        self.run_irt_classifier(params)
+        self.irt_image_i = self.irt_image[:, :, 0]
+        self.irt_image_r = self.irt_image[:, :, 1]
+        self.irt_image_t = self.irt_image[:, :, 2]
+        same_pixels_i = np.sum(self.irt_image_i == self.gt.channel_i)
+        same_pixels_r = np.sum(self.irt_image_r == self.gt.channel_r)
+        same_pixels_t = np.sum(self.irt_image_t == self.gt.channel_t)
+        amount_pixels = self.gt.channel_i.size
+        self.likelihood_i = same_pixels_i*1./amount_pixels
+        self.likelihood_r = same_pixels_r*1./amount_pixels
+        self.likelihood_t = same_pixels_t*1./amount_pixels
+        self.irt_likelihood = int(self.likelihood_i *
+                                  self.likelihood_r *
+                                  self.likelihood_t * 100000)
+        return self.irt_likelihood
 
 
 class Mountain:
@@ -344,13 +458,50 @@ def test_ps_optimizer():
     fnc.surface_plot_3d(particles_data)
 
 
-def test_irt_classifier():
+def test_irt_classifier(path_image, params=(50, 75, 3, 10, 30, 1, 0, 2, 2, 0.45,
+                                            1.3, 0.1, 2, 10, 2, 10, 5, 5, 800,
+                                            100, 100, 800, 2, 10, 2, 10, 10, 10,
+                                            40, 80)):
     import alyvix_irt_classifier.contouring as irt
-
-    contouring = irt.Contouring()
-    numpy_matrix = contouring.auto_contouring(
-        'alyvix_irt_classifier/image_to_classify_01.png', scaling_factor=2.0)
-    print(numpy_matrix)
+    # canny_threshold1=50,
+    # canny_threshold2=75,
+    # canny_apertureSize=3,
+    # hough_threshold=10,
+    # hough_minLineLength=30,
+    # hough_maxLineGap=1,
+    # line_angle_tolerance=0,
+    # ellipse_width=2,
+    # ellipse_height=2,
+    # text_roi_emptiness=0.45,
+    # text_roi_proportion=1.3,
+    # image_roi_emptiness=0.1,
+    # vline_hw_proportion=2,
+    # vline_w_maxsize=10,
+    # hline_wh_proportion=2,
+    # hline_h_maxsize=10,
+    # rect_w_minsize=5,
+    # rect_h_minsize=5,
+    # rect_w_maxsize_01=800,
+    # rect_h_maxsize_01=100,
+    # rect_w_maxsize_02=100,
+    # rect_h_maxsize_02=800,
+    # rect_hw_proportion=2,
+    # rect_hw_w_maxsize=10,
+    # rect_wh_proportion=2,
+    # rect_wh_h_maxsize=10,
+    # hrect_proximity=10,
+    # vrect_proximity=10,
+    # vrect_others_proximity=40,
+    # hrect_others_proximity=80
+    contouring = irt.Contouring(*params)
+    irt_image = contouring.auto_contouring(path_image)
+    irt_image_i = irt_image[:, :, 0]
+    irt_image_r = irt_image[:, :, 1]
+    irt_image_t = irt_image[:, :, 2]
+    folder_irt_channels = '/'.join(path_image.split('/')[:-1]) + '/'
+    cv2.imwrite(folder_irt_channels+'irt_image_i.png', irt_image_i*255)
+    cv2.imwrite(folder_irt_channels+'irt_image_r.png', irt_image_r*255)
+    cv2.imwrite(folder_irt_channels+'irt_image_t.png', irt_image_t*255)
 
     debug_matrix = contouring.get_debug_matrix()
     debug_image = contouring.get_debug_image()
@@ -358,17 +509,28 @@ def test_irt_classifier():
     cv2.imwrite("alyvix_irt_classifier/debug_image.png", debug_image)
 
 
-def main():
+def test_ground_truth(path_image):
+    gt = GroundTruth(path_image)
+    gt.save_ground_truth_channels()
+
+
+def test_labellikelihood(path_image_to_irt_classify, path_ground_truth_image,
+                         params):
+    ll = LabelLikelihood(path_image_to_irt_classify, path_ground_truth_image)
+    ll.measure_irt_likelihood(params)
+    print(ll)
+
+
+def pso_irtc():
     """
         https://docs.opencv.org/2.4.9/modules/imgproc/doc/
             feature_detection.html?highlight=canny#canny
             feature_detection.html?highlight=canny#houghlinesp
             filtering.html#getstructuringelement
     """
-    import alyvix_irt_classifier.contouring as irt
 
-    i = 10
-    p = 10
+    i = 100
+    p = 100
     iw = .75
     cw = .5
     sw = .5
@@ -376,7 +538,7 @@ def main():
 
     canny_threshold1 = ParameterSampling(0, 300, 7)
     canny_threshold2 = ParameterSampling(0, 300, 7)
-    canny_apertureSize = ParameterSampling(3, 6, 4)
+    canny_apertureSize = ParameterSampling(3, 3, 1)
     hough_threshold = ParameterSampling(1, 10, 10)
     hough_minLineLength = ParameterSampling(1, 10, 10)
     hough_maxLineGap = ParameterSampling(1, 10, 10)
@@ -407,61 +569,36 @@ def main():
     params = [canny_threshold1, canny_threshold2, canny_apertureSize,
               hough_threshold, hough_minLineLength, hough_maxLineGap,
               line_angle_cancel, ellipse_width, ellipse_height,
-              text_roi_emptiness, text_roi_proportion, rect_w_minsize,
-              rect_h_minsize, rect_w_maxsize_01, rect_h_maxsize_01,
-              rect_w_maxsize_02, rect_h_maxsize_02, rect_hw_proportion,
-              rect_hw_w_maxsize, rect_wh_proportion, rect_wh_h_maxsize,
-              hrect_proximity, vrect_proximity, vrect_others_proximity,
-              hrect_others_proximity]
+              text_roi_emptiness, text_roi_proportion, image_roi_emptiness,
+              vline_hw_proportion, vline_w_maxsize, hline_wh_proportion,
+              hline_h_maxsize, rect_w_minsize, rect_h_minsize,
+              rect_w_maxsize_01, rect_h_maxsize_01, rect_w_maxsize_02,
+              rect_h_maxsize_02, rect_hw_proportion, rect_hw_w_maxsize,
+              rect_wh_proportion, rect_wh_h_maxsize, hrect_proximity,
+              vrect_proximity, vrect_others_proximity, hrect_others_proximity]
 
-    contouring = irt.Contouring(
-        canny_threshold1.samples[0],
-        canny_threshold2.samples[0],
-        canny_apertureSize.samples[0],
-        hough_threshold.samples[0],
-        hough_minLineLength.samples[0],
-        hough_maxLineGap.samples[0],
-        line_angle_cancel.samples[0],
-        ellipse_width.samples[0],
-        ellipse_height.samples[0],
-        text_roi_emptiness.samples[0],
-        text_roi_proportion.samples[0],
-        image_roi_emptiness.samples[0],
-        vline_hw_proportion.samples[0],
-        vline_w_maxsize.samples[0],
-        hline_wh_proportion.samples[0],
-        hline_h_maxsize.samples[0],
-        rect_w_minsize.samples[0],
-        rect_h_minsize.samples[0],
-        rect_w_maxsize_01.samples[0],
-        rect_h_maxsize_01.samples[0],
-        rect_w_maxsize_02.samples[0],
-        rect_h_maxsize_02.samples[0],
-        rect_hw_proportion.samples[0],
-        rect_hw_w_maxsize.samples[0],
-        rect_wh_proportion.samples[0],
-        rect_wh_h_maxsize.samples[0],
-        hrect_proximity.samples[0],
-        vrect_proximity.samples[0],
-        vrect_others_proximity.samples[0],
-        hrect_others_proximity.samples[0]
-    )
-    numpy_matrix = contouring.auto_contouring(
-        'alyvix_irt_classifier/image_to_classify_01.png')
-    # cv2.imwrite("numpy_matrix_i.png", numpy_matrix[:, :, 0]*255)
-    # cv2.imwrite("numpy_matrix_r.png", numpy_matrix[:, :, 1]*255)
-    # cv2.imwrite("numpy_matrix_t.png", numpy_matrix[:, :, 2]*255)
+    ll = LabelLikelihood('alyvix_irt_classifier/image_to_classify_01.png',
+                         'alyvix_irt_classifier/image_ground_truth_01.png')
+    gain_function = ll.measure_irt_likelihood
 
-    # gain_function =
-
-    # pso = PSO(gain_function=gain_function, parameters=params, iterations=i,
-    #           particle_amount=p, inertial_weight=iw, cognitive_weight=cw,
-    #           social_weight=sw, verbose=v)
-    # particles_data = pso.iter_particle_swarm()
-    # print(pso)
+    pso = PSO(gain_function=gain_function, parameters=params, iterations=i,
+              particle_amount=p, inertial_weight=iw, cognitive_weight=cw,
+              social_weight=sw, verbose=v)
+    particles_data = pso.iter_particle_swarm()
+    print(pso)
 
 
 if __name__ == '__main__':
+    image_to_classify = 'alyvix_irt_classifier/image_to_classify_01.png'
+    image_ground_truth = 'alyvix_irt_classifier/image_ground_truth_01.png'
+    man_params = (50, 75, 3, 10, 30, 1, 0, 2, 2, 0.45, 1.3, 0.1, 2, 10, 2, 10,
+                  5, 5, 800, 100, 100, 800, 2, 10, 2, 10, 10, 10, 40, 80)
+    pso_params = (100, 50, 3, 9, 10, 1, 0, 2, 2, 0.2, 1.2, 0.0, 8, 1, 1, 7, 2,
+                  1, 600, 50, 50, 1000, 1, 3, 10, 10, 2, 2, 40, 20)
+
+    # test_irt_classifier(image_to_classify, man_params)
+    # test_ground_truth(image_ground_truth)
+    # test_labellikelihood(image_to_classify, image_ground_truth, man_params)
+    # pso_irtc()
+
     test_ps_optimizer()
-    # test_irt_classifier()
-    # main()
