@@ -521,7 +521,8 @@ def test_labellikelihood(path_image_to_irt_classify, path_ground_truth_image,
     print(ll)
 
 
-def pso_irtc(i=10, p=3, iw=.75, cw=.5, sw=.5, v=1):
+def pso_irtc(image_to_classify, image_ground_truth,
+             i=10, p=3, iw=.75, cw=.5, sw=.5, v=1):
     """
         https://docs.opencv.org/2.4.9/modules/imgproc/doc/
             feature_detection.html?highlight=canny#canny
@@ -570,8 +571,7 @@ def pso_irtc(i=10, p=3, iw=.75, cw=.5, sw=.5, v=1):
               rect_wh_proportion, rect_wh_h_maxsize, hrect_proximity,
               vrect_proximity, vrect_others_proximity, hrect_others_proximity]
 
-    ll = LabelLikelihood('alyvix_irt_classifier/image_to_classify_01.png',
-                         'alyvix_irt_classifier/image_ground_truth_01.png')
+    ll = LabelLikelihood(image_to_classify, image_ground_truth)
     gain_function = ll.measure_irt_likelihood
 
     pso = PSO(gain_function=gain_function, parameters=params, iterations=i,
@@ -582,16 +582,18 @@ def pso_irtc(i=10, p=3, iw=.75, cw=.5, sw=.5, v=1):
 
 
 if __name__ == '__main__':
-    image_to_classify = 'alyvix_irt_classifier/image_to_classify_01.png'
-    image_ground_truth = 'alyvix_irt_classifier/image_ground_truth_01.png'
+    image_to_classify = 'alyvix_irt_classifier/image_to_classify_02.png'
+    image_ground_truth = 'alyvix_irt_classifier/image_ground_truth_02.png'
     man_params = (50, 75, 3, 10, 30, 1, 0, 2, 2, 0.45, 1.3, 0.1, 2, 10, 2, 10,
                   5, 5, 800, 100, 100, 800, 2, 10, 2, 10, 10, 10, 40, 80)
-    pso_params = (100, 50, 3, 9, 10, 1, 0, 2, 2, 0.2, 1.2, 0.0, 8, 1, 1, 7, 2,
-                  1, 600, 50, 50, 1000, 1, 3, 10, 10, 2, 2, 40, 20)
+    pso_params = (100, 200, 3, 3, 6, 10, 0, 6, 2, 0.1, 2.1, 1.0, 5, 10, 7, 3,
+                  3, 2, 700, 250, 200, 800, 10, 10, 1, 10, 8, 20, 100, 100)
 
-    # test_irt_classifier(image_to_classify, man_params)
+    # test_irt_classifier(image_to_classify, pso_params)
     # test_ground_truth(image_ground_truth)
     # test_labellikelihood(image_to_classify, image_ground_truth, man_params)
-    # pso_irtc(i=3, p=3, iw=.75, cw=.5, sw=.5, v=1)
+    # pso_irtc(image_to_classify=image_to_classify,
+    #          image_ground_truth=image_ground_truth,
+    #          i=10, p=10, iw=.75, cw=.5, sw=.5, v=1)
 
     test_ps_optimizer()
