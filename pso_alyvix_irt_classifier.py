@@ -352,18 +352,53 @@ class LabelLikelihood:
         self.irt_image = irt_classification.auto_contouring(
             self.path_image_to_irt_classify)
 
-    def measure_irt_likelihood(self, params):
+    def measure_irt_likelihood_same_pixels(self, params):
         self.run_irt_classifier(params)
         self.irt_image_i = self.irt_image[:, :, 0]
         self.irt_image_r = self.irt_image[:, :, 1]
         self.irt_image_t = self.irt_image[:, :, 2]
+        amount_pixels = self.gt.channel_i.size
         same_pixels_i = np.sum(self.irt_image_i == self.gt.channel_i)
         same_pixels_r = np.sum(self.irt_image_r == self.gt.channel_r)
         same_pixels_t = np.sum(self.irt_image_t == self.gt.channel_t)
-        amount_pixels = self.gt.channel_i.size
         self.likelihood_i = same_pixels_i*1./amount_pixels
         self.likelihood_r = same_pixels_r*1./amount_pixels
         self.likelihood_t = same_pixels_t*1./amount_pixels
+        self.irt_likelihood = int(self.likelihood_i *
+                                  self.likelihood_r *
+                                  self.likelihood_t * 100000)
+        return self.irt_likelihood
+
+    def measure_irt_likelihood_good_bad_pixels(self, params):
+        self.run_irt_classifier(params)
+        self.irt_image_i = self.irt_image[:, :, 0]
+        self.irt_image_r = self.irt_image[:, :, 1]
+        self.irt_image_t = self.irt_image[:, :, 2]
+        amount_pixels = self.gt.channel_i.size
+        amount_pixels_i = np.sum(self.gt.channel_i)
+        amount_pixels_r = np.sum(self.gt.channel_r)
+        amount_pixels_t = np.sum(self.gt.channel_t)
+        amount_no_pixels_i = amount_pixels - amount_pixels_i
+        amount_no_pixels_r = amount_pixels - amount_pixels_r
+        amount_no_pixels_t = amount_pixels - amount_pixels_t
+        good_pixels_i = self.irt_image_i*self.gt.channel_i
+        good_pixels_r = self.irt_image_r*self.gt.channel_r
+        good_pixels_t = self.irt_image_t*self.gt.channel_t
+        bad_pixels_i = self.irt_image_i - good_pixels_i
+        bad_pixels_r = self.irt_image_r - good_pixels_r
+        bad_pixels_t = self.irt_image_t - good_pixels_t
+        amount_good_pixels_i = np.sum(good_pixels_i)
+        amount_good_pixels_r = np.sum(good_pixels_r)
+        amount_good_pixels_t = np.sum(good_pixels_t)
+        amount_bad_pixels_i = np.sum(bad_pixels_i)
+        amount_bad_pixels_r = np.sum(bad_pixels_r)
+        amount_bad_pixels_t = np.sum(bad_pixels_t)
+        self.likelihood_i = (amount_good_pixels_i*1./amount_pixels_i) * \
+                            (amount_bad_pixels_i*1./amount_no_pixels_i)
+        self.likelihood_r = (amount_good_pixels_r*1./amount_pixels_r) * \
+                            (amount_bad_pixels_r*1./amount_no_pixels_r)
+        self.likelihood_t = (amount_good_pixels_t*1./amount_pixels_t) * \
+                            (amount_bad_pixels_t*1./amount_no_pixels_t)
         self.irt_likelihood = int(self.likelihood_i *
                                   self.likelihood_r *
                                   self.likelihood_t * 100000)
@@ -517,7 +552,8 @@ def test_ground_truth(path_image):
 def test_labellikelihood(path_image_to_irt_classify, path_ground_truth_image,
                          params):
     ll = LabelLikelihood(path_image_to_irt_classify, path_ground_truth_image)
-    ll.measure_irt_likelihood(params)
+    # ll.measure_irt_likelihood_same_pixels(params)
+    ll.measure_irt_likelihood_good_bad_pixels(params)
     print(ll)
 
 
@@ -572,7 +608,8 @@ def pso_irtc(image_to_classify, image_ground_truth,
               vrect_proximity, vrect_others_proximity, hrect_others_proximity]
 
     ll = LabelLikelihood(image_to_classify, image_ground_truth)
-    gain_function = ll.measure_irt_likelihood
+    # gain_function = ll.measure_irt_likelihood_same_pixels
+    gain_function = ll.measure_irt_likelihood_good_bad_pixels
 
     pso = PSO(gain_function=gain_function, parameters=params, iterations=i,
               particle_amount=p, inertial_weight=iw, cognitive_weight=cw,
@@ -586,14 +623,14 @@ if __name__ == '__main__':
     image_ground_truth = 'alyvix_irt_classifier/image_ground_truth_02.png'
     man_params = (50, 75, 3, 10, 30, 1, 0, 2, 2, 0.45, 1.3, 0.1, 2, 10, 2, 10,
                   5, 5, 800, 100, 100, 800, 2, 10, 2, 10, 10, 10, 40, 80)
-    pso_params = (100, 200, 3, 3, 6, 10, 0, 6, 2, 0.1, 2.1, 1.0, 5, 10, 7, 3,
-                  3, 2, 700, 250, 200, 800, 10, 10, 1, 10, 8, 20, 100, 100)
+    pso_params = (100, 100, 3, 1, 10, 6, 5, 10, 7, 0.0, 1.8, 0.1, 7, 8, 4, 4, 3,
+                  8, 600, 100, 200, 600, 5, 10, 2, 4, 8, 2, 160, 120)
 
     # test_irt_classifier(image_to_classify, pso_params)
     # test_ground_truth(image_ground_truth)
-    # test_labellikelihood(image_to_classify, image_ground_truth, man_params)
-    # pso_irtc(image_to_classify=image_to_classify,
-    #          image_ground_truth=image_ground_truth,
-    #          i=10, p=10, iw=.75, cw=.5, sw=.5, v=1)
+    # test_labellikelihood(image_to_classify, image_ground_truth, pso_params)
+    pso_irtc(image_to_classify=image_to_classify,
+             image_ground_truth=image_ground_truth,
+             i=100, p=100, iw=.75, cw=.5, sw=.5, v=1)
 
-    test_ps_optimizer()
+    # test_ps_optimizer()
