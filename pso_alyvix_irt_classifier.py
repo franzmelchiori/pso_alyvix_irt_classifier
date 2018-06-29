@@ -629,8 +629,8 @@ if __name__ == '__main__':
     # test_irt_classifier(image_to_classify, pso_params)
     # test_ground_truth(image_ground_truth)
     # test_labellikelihood(image_to_classify, image_ground_truth, pso_params)
-    pso_irtc(image_to_classify=image_to_classify,
-             image_ground_truth=image_ground_truth,
-             i=100, p=100, iw=.75, cw=.5, sw=.5, v=1)
+    # pso_irtc(image_to_classify=image_to_classify,
+    #          image_ground_truth=image_ground_truth,
+    #          i=100, p=100, iw=.75, cw=.5, sw=.5, v=1)
 
-    # test_ps_optimizer()
+    test_ps_optimizer()
