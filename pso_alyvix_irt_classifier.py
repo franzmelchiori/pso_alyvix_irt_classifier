@@ -635,8 +635,8 @@ def pso_irtc(image_to_classify, image_ground_truth,
             filtering.html#getstructuringelement
     """
 
-    canny_threshold1 = ParameterSampling(0, 300, 7)
-    canny_threshold2 = ParameterSampling(0, 300, 7)
+    canny_threshold1 = ParameterSampling(0, 200, 41)
+    canny_threshold2 = ParameterSampling(0, 200, 41)
     canny_apertureSize = ParameterSampling(3, 3, 1)
     hough_threshold = ParameterSampling(1, 10, 10)
     hough_minLineLength = ParameterSampling(1, 10, 10)
@@ -653,18 +653,18 @@ def pso_irtc(image_to_classify, image_ground_truth,
     hline_h_maxsize = ParameterSampling(1, 10, 10)
     rect_w_minsize = ParameterSampling(1, 10, 10)
     rect_h_minsize = ParameterSampling(1, 10, 10)
-    rect_w_maxsize_01 = ParameterSampling(600, 1000, 5)
-    rect_h_maxsize_01 = ParameterSampling(50, 250, 5)
-    rect_w_maxsize_02 = ParameterSampling(50, 250, 5)
-    rect_h_maxsize_02 = ParameterSampling(600, 1000, 5)
+    rect_w_maxsize_01 = ParameterSampling(600, 1000, 41)
+    rect_h_maxsize_01 = ParameterSampling(50, 250, 21)
+    rect_w_maxsize_02 = ParameterSampling(50, 250, 21)
+    rect_h_maxsize_02 = ParameterSampling(600, 1000, 41)
     rect_hw_proportion = ParameterSampling(1, 10, 10)
     rect_hw_w_maxsize = ParameterSampling(1, 10, 10)
     rect_wh_proportion = ParameterSampling(1, 10, 10)
     rect_wh_h_maxsize = ParameterSampling(1, 10, 10)
-    hrect_proximity = ParameterSampling(2, 20, 10)
-    vrect_proximity = ParameterSampling(2, 20, 10)
-    vrect_others_proximity = ParameterSampling(20, 200, 10)
-    hrect_others_proximity = ParameterSampling(20, 200, 10)
+    hrect_proximity = ParameterSampling(2, 20, 19)
+    vrect_proximity = ParameterSampling(2, 20, 19)
+    vrect_others_proximity = ParameterSampling(20, 200, 19)
+    hrect_others_proximity = ParameterSampling(20, 200, 19)
     params = [canny_threshold1, canny_threshold2, canny_apertureSize,
               hough_threshold, hough_minLineLength, hough_maxLineGap,
               line_angle_cancel, ellipse_width, ellipse_height,
@@ -692,14 +692,14 @@ if __name__ == '__main__':
     image_ground_truth = 'alyvix_irt_classifier/image_ground_truth_02.png'
     man_params = (50, 75, 3, 10, 30, 1, 0, 2, 2, 0.45, 1.3, 0.1, 2, 10, 2, 10,
                   5, 5, 800, 100, 100, 800, 2, 10, 2, 10, 10, 10, 40, 80)
-    pso_params = (50, 50, 3, 4, 10, 1, 2, 4, 4, 0.4, 1.8, 0.2, 2, 7, 6, 5, 10,
-                  8, 600, 50, 50, 700, 2, 3, 8, 3, 10, 2, 160, 60)
+    pso_params = (60, 65, 3, 2, 10, 1, 4, 5, 2, 0.0, 2.1, 0.2, 7, 1, 9, 4, 9, 6,
+                  700, 180, 130, 1000, 2, 9, 1, 3, 5, 19, 110, 30)
 
     # test_irt_classifier(image_to_classify, pso_params)
     # test_ground_truth(image_ground_truth)
     # test_labellikelihood(image_to_classify, image_ground_truth, pso_params)
     # pso_irtc(image_to_classify=image_to_classify,
     #          image_ground_truth=image_ground_truth,
-    #          i=10, p=1000, iw=.75, cw=.5, sw=.5, v=1)
+    #          i=100, p=1000, iw=.75, cw=.5, sw=.5, v=1)
 
     test_ps_optimizer()
