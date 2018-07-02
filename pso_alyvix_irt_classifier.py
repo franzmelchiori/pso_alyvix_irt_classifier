@@ -287,6 +287,25 @@ class LabelLikelihood:
         self.irt_image_i = np.zeros(shape_image, dtype=np.uint8)
         self.irt_image_r = np.zeros(shape_image, dtype=np.uint8)
         self.irt_image_t = np.zeros(shape_image, dtype=np.uint8)
+        self.amount_pixels = 0
+        self.amount_pixels_i = 0
+        self.amount_pixels_r = 0
+        self.amount_pixels_t = 0
+        self.amount_no_pixels_i = 0
+        self.amount_no_pixels_r = 0
+        self.amount_no_pixels_t = 0
+        self.amount_good_pixels_i = 0
+        self.amount_good_pixels_r = 0
+        self.amount_good_pixels_t = 0
+        self.amount_bad_pixels_i = 0
+        self.amount_bad_pixels_r = 0
+        self.amount_bad_pixels_t = 0
+        self.likelihood_good_i = 0.
+        self.likelihood_good_r = 0.
+        self.likelihood_good_t = 0.
+        self.likelihood_bad_i = 0.
+        self.likelihood_bad_r = 0.
+        self.likelihood_bad_t = 0.
         self.likelihood_i = 0.
         self.likelihood_r = 0.
         self.likelihood_t = 0.
@@ -295,12 +314,38 @@ class LabelLikelihood:
     def __repr__(self):
         print_message = ''
         print_message += "    * Likelihood\n"
+        print_message += "        amount_pixels: {0}\n" \
+                         "".format(self.amount_pixels)
         print_message += "        I: {0}\n" \
                          "".format(self.likelihood_i)
+        print_message += "            amount_good_pixels_i: {0}\n" \
+                         "".format(self.amount_good_pixels_i)
+        print_message += "            amount_bad_pixels_i: {0}\n" \
+                         "".format(self.amount_bad_pixels_i)
+        print_message += "            likelihood_good_i: {0}\n" \
+                         "".format(self.likelihood_good_i)
+        print_message += "            likelihood_bad_i: {0}\n" \
+                         "".format(self.likelihood_bad_i)
         print_message += "        R: {0}\n" \
                          "".format(self.likelihood_r)
+        print_message += "            amount_good_pixels_r: {0}\n" \
+                         "".format(self.amount_good_pixels_r)
+        print_message += "            amount_bad_pixels_r: {0}\n" \
+                         "".format(self.amount_bad_pixels_r)
+        print_message += "            likelihood_good_r: {0}\n" \
+                         "".format(self.likelihood_good_r)
+        print_message += "            likelihood_bad_r: {0}\n" \
+                         "".format(self.likelihood_bad_r)
         print_message += "        T: {0}\n" \
                          "".format(self.likelihood_t)
+        print_message += "            amount_good_pixels_t: {0}\n" \
+                         "".format(self.amount_good_pixels_t)
+        print_message += "            amount_bad_pixels_t: {0}\n" \
+                         "".format(self.amount_bad_pixels_t)
+        print_message += "            likelihood_good_t: {0}\n" \
+                         "".format(self.likelihood_good_t)
+        print_message += "            likelihood_bad_t: {0}\n" \
+                         "".format(self.likelihood_bad_t)
         print_message += "        IRT: {0}\n" \
                          "".format(self.irt_likelihood)
         return print_message
@@ -374,34 +419,58 @@ class LabelLikelihood:
         self.irt_image_i = self.irt_image[:, :, 0]
         self.irt_image_r = self.irt_image[:, :, 1]
         self.irt_image_t = self.irt_image[:, :, 2]
-        amount_pixels = self.gt.channel_i.size
-        amount_pixels_i = np.sum(self.gt.channel_i)
-        amount_pixels_r = np.sum(self.gt.channel_r)
-        amount_pixels_t = np.sum(self.gt.channel_t)
-        amount_no_pixels_i = amount_pixels - amount_pixels_i
-        amount_no_pixels_r = amount_pixels - amount_pixels_r
-        amount_no_pixels_t = amount_pixels - amount_pixels_t
-        good_pixels_i = self.irt_image_i*self.gt.channel_i
-        good_pixels_r = self.irt_image_r*self.gt.channel_r
-        good_pixels_t = self.irt_image_t*self.gt.channel_t
-        bad_pixels_i = self.irt_image_i - good_pixels_i
-        bad_pixels_r = self.irt_image_r - good_pixels_r
-        bad_pixels_t = self.irt_image_t - good_pixels_t
-        amount_good_pixels_i = np.sum(good_pixels_i)
-        amount_good_pixels_r = np.sum(good_pixels_r)
-        amount_good_pixels_t = np.sum(good_pixels_t)
-        amount_bad_pixels_i = np.sum(bad_pixels_i)
-        amount_bad_pixels_r = np.sum(bad_pixels_r)
-        amount_bad_pixels_t = np.sum(bad_pixels_t)
-        self.likelihood_i = (amount_good_pixels_i*1./amount_pixels_i) * \
-                            (amount_bad_pixels_i*1./amount_no_pixels_i)
-        self.likelihood_r = (amount_good_pixels_r*1./amount_pixels_r) * \
-                            (amount_bad_pixels_r*1./amount_no_pixels_r)
-        self.likelihood_t = (amount_good_pixels_t*1./amount_pixels_t) * \
-                            (amount_bad_pixels_t*1./amount_no_pixels_t)
+        self.amount_pixels = self.gt.channel_i.size
+        self.amount_pixels_i = np.sum(self.gt.channel_i)
+        self.amount_pixels_r = np.sum(self.gt.channel_r)
+        self.amount_pixels_t = np.sum(self.gt.channel_t)
+        self.amount_no_pixels_i = self.amount_pixels - self.amount_pixels_i
+        self.amount_no_pixels_r = self.amount_pixels - self.amount_pixels_r
+        self.amount_no_pixels_t = self.amount_pixels - self.amount_pixels_t
+        good_pixels_i = self.irt_image_i * self.gt.channel_i
+        good_pixels_r = self.irt_image_r * self.gt.channel_r
+        good_pixels_t = self.irt_image_t * self.gt.channel_t
+        bad_pixels_i = (np.negative(self.irt_image_i) + 1) * (
+                np.negative(self.gt.channel_i) + 1)
+        bad_pixels_r = (np.negative(self.irt_image_r) + 1) * (
+                np.negative(self.gt.channel_r) + 1)
+        bad_pixels_t = (np.negative(self.irt_image_t) + 1) * (
+                np.negative(self.gt.channel_t) + 1)
+        self.amount_good_pixels_i = np.sum(good_pixels_i)
+        self.amount_good_pixels_r = np.sum(good_pixels_r)
+        self.amount_good_pixels_t = np.sum(good_pixels_t)
+        self.amount_bad_pixels_i = np.sum(bad_pixels_i)
+        self.amount_bad_pixels_r = np.sum(bad_pixels_r)
+        self.amount_bad_pixels_t = np.sum(bad_pixels_t)
+        self.likelihood_good_i = (self.amount_good_pixels_i * 1.) / (
+            self.amount_pixels_i)
+        self.likelihood_good_r = (self.amount_good_pixels_r * 1.) / (
+            self.amount_pixels_r)
+        self.likelihood_good_t = (self.amount_good_pixels_t * 1.) / (
+            self.amount_pixels_t)
+        self.likelihood_bad_i = (self.amount_bad_pixels_i * 1.) / (
+            self.amount_no_pixels_i)
+        self.likelihood_bad_r = (self.amount_bad_pixels_r * 1.) / (
+            self.amount_no_pixels_r)
+        self.likelihood_bad_t = (self.amount_bad_pixels_t * 1.) / (
+            self.amount_no_pixels_t)
+        self.likelihood_i = self.likelihood_good_i * self.likelihood_bad_i
+        self.likelihood_r = self.likelihood_good_r * self.likelihood_bad_r
+        self.likelihood_t = self.likelihood_good_t * self.likelihood_bad_t
         self.irt_likelihood = int(self.likelihood_i *
                                   self.likelihood_r *
-                                  self.likelihood_t * 100000)
+                                  self.likelihood_t * 100000.)
+        # cv2.imwrite('irt_image_i.png', self.irt_image_i * 255)
+        # cv2.imwrite('irt_image_r.png', self.irt_image_r * 255)
+        # cv2.imwrite('irt_image_t.png', self.irt_image_t * 255)
+        # cv2.imwrite('gt_channel_i.png', self.gt.channel_i * 255)
+        # cv2.imwrite('gt_channel_r.png', self.gt.channel_r * 255)
+        # cv2.imwrite('gt_channel_t.png', self.gt.channel_t * 255)
+        # cv2.imwrite('good_pixels_i.png', good_pixels_i * 255)
+        # cv2.imwrite('good_pixels_r.png', good_pixels_r * 255)
+        # cv2.imwrite('good_pixels_t.png', good_pixels_t * 255)
+        # cv2.imwrite('bad_pixels_i.png', bad_pixels_i * 255)
+        # cv2.imwrite('bad_pixels_r.png', bad_pixels_r * 255)
+        # cv2.imwrite('bad_pixels_t.png', bad_pixels_t * 255)
         return self.irt_likelihood
 
 
@@ -623,14 +692,14 @@ if __name__ == '__main__':
     image_ground_truth = 'alyvix_irt_classifier/image_ground_truth_02.png'
     man_params = (50, 75, 3, 10, 30, 1, 0, 2, 2, 0.45, 1.3, 0.1, 2, 10, 2, 10,
                   5, 5, 800, 100, 100, 800, 2, 10, 2, 10, 10, 10, 40, 80)
-    pso_params = (100, 100, 3, 1, 10, 6, 5, 10, 7, 0.0, 1.8, 0.1, 7, 8, 4, 4, 3,
-                  8, 600, 100, 200, 600, 5, 10, 2, 4, 8, 2, 160, 120)
+    pso_params = (50, 50, 3, 4, 10, 1, 2, 4, 4, 0.4, 1.8, 0.2, 2, 7, 6, 5, 10,
+                  8, 600, 50, 50, 700, 2, 3, 8, 3, 10, 2, 160, 60)
 
     # test_irt_classifier(image_to_classify, pso_params)
     # test_ground_truth(image_ground_truth)
     # test_labellikelihood(image_to_classify, image_ground_truth, pso_params)
     # pso_irtc(image_to_classify=image_to_classify,
     #          image_ground_truth=image_ground_truth,
-    #          i=100, p=100, iw=.75, cw=.5, sw=.5, v=1)
+    #          i=10, p=1000, iw=.75, cw=.5, sw=.5, v=1)
 
     test_ps_optimizer()
