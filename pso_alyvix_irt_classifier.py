@@ -209,13 +209,12 @@ class PSO:
 
     def __repr__(self):
         print_message = ''
-        print_message += '*** PSO\n'
         solution_values = [self.parameters[i].samples[p]
                            for i, p
                            in enumerate(self.particle_result.best_swarm)]
         result_value = self.particle_result.best_swarm_value
-        print_message += '*** Best solution: {0}\n'.format(solution_values)
-        print_message += '*** Best result: {0}'.format(result_value)
+        print_message += '    * Best result: {0}\n'.format(result_value)
+        print_message += '    * Best solution: {0}'.format(solution_values)
         return print_message
 
     def init_particle_space(self):
@@ -241,8 +240,8 @@ class PSO:
                                       self.iterations))
             particles_data.append(particle_data)
         for i in range(self.iterations):
-            if self.verbose>=1:
-                print('** Iteration {0}'.format(i+1))
+            if self.verbose >= 1:
+                print('* Iteration {0}'.format(i+1))
             for particle, particle_data in zip(self.particle_space,
                                                particles_data):
                 sample = particle.perturb()
@@ -252,10 +251,12 @@ class PSO:
                     self.particle_result.best_swarm = particle.position
                     self.particle_result.best_swarm_value = value
                 particle_data[:, i] = sample
-                if self.verbose>=2:
+                if self.verbose >= 2:
                     print(particle)
             for particle in self.particle_space:
                 particle.set_best_swarm(self.particle_result.best_swarm)
+            if self.verbose >= 1:
+                print(self)
         return particles_data
 
 
@@ -546,7 +547,7 @@ def test_ps_optimizer():
     iw = .75
     cw = .5
     sw = .5
-    v = 2
+    v = 1
 
     param_1 = ParameterSampling(0, s-1, s)
     param_2 = ParameterSampling(0, s-1, s)
@@ -558,7 +559,6 @@ def test_ps_optimizer():
               particle_amount=p, inertial_weight=iw, cognitive_weight=cw,
               social_weight=sw, verbose=v)
     particles_data = pso.iter_particle_swarm()
-    print(pso)
     fnc.surface_plot_3d(particles_data)
 
 
@@ -635,8 +635,8 @@ def pso_irtc(image_to_classify, image_ground_truth,
             filtering.html#getstructuringelement
     """
 
-    canny_threshold1 = ParameterSampling(0, 200, 41)
-    canny_threshold2 = ParameterSampling(0, 200, 41)
+    canny_threshold1 = ParameterSampling(0, 100, 51)
+    canny_threshold2 = ParameterSampling(0, 100, 51)
     canny_apertureSize = ParameterSampling(3, 3, 1)
     hough_threshold = ParameterSampling(1, 10, 10)
     hough_minLineLength = ParameterSampling(1, 10, 10)
@@ -684,7 +684,6 @@ def pso_irtc(image_to_classify, image_ground_truth,
               particle_amount=p, inertial_weight=iw, cognitive_weight=cw,
               social_weight=sw, verbose=v)
     particles_data = pso.iter_particle_swarm()
-    print(pso)
 
 
 if __name__ == '__main__':
@@ -692,14 +691,14 @@ if __name__ == '__main__':
     image_ground_truth = 'alyvix_irt_classifier/image_ground_truth_02.png'
     man_params = (50, 75, 3, 10, 30, 1, 0, 2, 2, 0.45, 1.3, 0.1, 2, 10, 2, 10,
                   5, 5, 800, 100, 100, 800, 2, 10, 2, 10, 10, 10, 40, 80)
-    pso_params = (60, 65, 3, 2, 10, 1, 4, 5, 2, 0.0, 2.1, 0.2, 7, 1, 9, 4, 9, 6,
-                  700, 180, 130, 1000, 2, 9, 1, 3, 5, 19, 110, 30)
+    pso_params = (26, 72, 3, 9, 10, 1, 0, 3, 6, 0.5, 1.2, 0.0, 3, 9, 4, 3, 1, 7,
+                  670, 50, 90, 740, 4, 1, 8, 8, 2, 9, 60, 50)
 
+    test_ps_optimizer()
     # test_irt_classifier(image_to_classify, pso_params)
     # test_ground_truth(image_ground_truth)
     # test_labellikelihood(image_to_classify, image_ground_truth, pso_params)
+
     # pso_irtc(image_to_classify=image_to_classify,
     #          image_ground_truth=image_ground_truth,
-    #          i=100, p=1000, iw=.75, cw=.5, sw=.5, v=1)
-
-    test_ps_optimizer()
+    #          i=10, p=3000, iw=.75, cw=.5, sw=.5, v=1)
